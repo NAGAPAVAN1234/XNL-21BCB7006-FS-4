@@ -1,21 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   compiler: {
-    // Enables the styled-components SWC transform
     styledComponents: true,
   },
-  // Enable React Strict Mode
   reactStrictMode: true,
-  // Optional: Add other configurations as needed
   images: {
-    // Configure image domains if using external images
-    domains: ['example.com'], // Replace with your domains
+    domains: ['example.com'],
   },
-  // Optional: Custom Webpack configuration if needed
-  webpack: (config) => {
-    // Example: Add any custom rules or plugins here
+  webpack: (config, { isServer }) => {
+    // If not on the server, treat these modules as external
+    if (!isServer) {
+      config.externals = {
+        'gcp-metadata': 'gcp-metadata',
+        'gaxios': 'gaxios',
+        'https-proxy-agent': 'https-proxy-agent' // Add this as well
+      };
+    }
     return config;
   },
 };
 
 export default nextConfig;
+
