@@ -123,7 +123,7 @@ The Freelance Platform is an online marketplace that connects freelancers with c
 
 **Architecture Diagram**
 
-![][image1]  
+![system architecture][https://github.com/NAGAPAVAN1234/XNL-21BCB7006-FS-4/blob/main/freelance.jpg]  
 ---
 
 ## **5\. User Guide**
