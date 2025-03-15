@@ -148,6 +148,7 @@ export default function Hire() {
   );
 
   return (
+      <Suspense fallback={<LoadingState />}>
     <div className="min-h-screen bg-gray-50">
       <div className="relative z-10">
         <NavBar />
@@ -381,5 +382,6 @@ export default function Hire() {
         </div>
       )}
     </div>
+        </Suspense>
   );
 }
