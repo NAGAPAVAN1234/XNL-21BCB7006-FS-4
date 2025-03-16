@@ -1,51 +1,64 @@
-import { useState } from 'react';
-import { useRouter } from 'next/router';
-import { FiSearch, FiFilter } from 'react-icons/fi';
-import dynamic from 'next/dynamic';
-import Loading from '@/components/Loading';
+"use client"; // ✅ Mark as Client Component
 
-const NavBar = dynamic(() => import('@/components/NavBar'), {
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation"; // ✅ Replace useRouter
+import { FiSearch, FiFilter } from "react-icons/fi";
+import dynamic from "next/dynamic";
+import Loading from "@/components/Loading";
+
+const NavBar = dynamic(() => import("@/components/NavBar"), {
   loading: () => <Loading />,
 });
 
-export default function FindWork({ projects, error }) {
-  const router = useRouter();
-  const [filters, setFilters] = useState({
-    search: router.query.search || '',
-    category: router.query.category || 'all',
-    budget: router.query.budget || 'all',
-  });
+export default function FindWork() {
+  const searchParams = useSearchParams(); // ✅ Use useSearchParams instead of useRouter
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const categories = [
-    { id: 'all', label: 'All Categories' },
-    { id: 'web', label: 'Web Development' },
-    { id: 'mobile', label: 'Mobile Development' },
-    { id: 'design', label: 'Design' },
-    { id: 'writing', label: 'Writing' },
-    { id: 'marketing', label: 'Digital Marketing' },
-    { id: 'video', label: 'Video & Animation' },
-    { id: 'music', label: 'Music & Audio' },
-    { id: 'data', label: 'Data Science' },
-  ];
+  // Extract search parameters safely
+  const filters = {
+    search: searchParams.get("search") || "",
+    category: searchParams.get("category") || "all",
+    budget: searchParams.get("budget") || "all",
+  };
 
-  const NoProjects = () => (
-    <div className="text-center py-12">
-      <div className="bg-white rounded-xl p-8 max-w-md mx-auto">
-        <h3 className="text-xl font-semibold mb-2">No Projects Found</h3>
-        <p className="text-gray-600 mb-4">
-          Try adjusting your filters or search terms to find more projects.
-        </p>
-        <button
-          onClick={() =>
-            router.push('/find-work', undefined, { shallow: true })
-          }
-          className="text-blue-600 hover:underline"
-        >
-          Clear Filters
-        </button>
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    fetchProjects();
+  }, [filters.search, filters.category, filters.budget]);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null); // Reset error before fetching
+
+      // Build query string
+      const queryParams = new URLSearchParams();
+      if (filters.search) queryParams.append("search", filters.search);
+      if (filters.category !== "all") queryParams.append("category", filters.category);
+      if (filters.budget !== "all") queryParams.append("budget", filters.budget);
+
+      const apiUrl = `/api/projects?${queryParams.toString()}`;
+      const response = await fetch(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch projects");
+      }
+
+      const data = await response.json();
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setError(error.message);
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,71 +66,37 @@ export default function FindWork({ projects, error }) {
 
       <div className="pt-24 pb-12">
         <div className="container mx-auto px-4">
-          {error ? (
+          {/* Search Input */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 flex items-center">
+            <FiSearch className="text-gray-500 mr-2" />
+            <input
+              type="text"
+              placeholder="Search projects..."
+              defaultValue={filters.search}
+              className="flex-1 p-2 border rounded-lg"
+            />
+          </div>
+
+          {/* Projects List */}
+          {loading ? (
+            <Loading />
+          ) : error ? (
             <div className="text-center text-red-600 py-4">{error}</div>
           ) : projects.length > 0 ? (
             <div className="grid gap-6">
               {projects.map((project) => (
                 <div key={project._id} className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-bold mb-2">{project.title}</h3>
-                      <p className="text-gray-600 mb-4">{project.description}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {project.skills.map((skill, index) => (
-                          <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-blue-600">${project.budget.minAmount}</p>
-                      <p className="text-gray-600">Fixed Price</p>
-                    </div>
-                  </div>
+                  <h3 className="text-xl font-bold mb-2">{project.title}</h3>
+                  <p className="text-gray-600 mb-4">{project.description}</p>
+                  <p className="text-2xl font-bold text-blue-600">${project.budget.minAmount}</p>
                 </div>
               ))}
             </div>
           ) : (
-            <NoProjects />
+            <div className="text-center py-12">No Projects Found</div>
           )}
         </div>
       </div>
     </div>
   );
-}
-
-// ✅ Server-Side Rendering (SSR)
-export async function getServerSideProps(context) {
-  try {
-    const { search = '', category = 'all', budget = 'all' } = context.query;
-
-    const queryParams = new URLSearchParams();
-    if (search) queryParams.append('search', search);
-    if (category && category !== 'all') queryParams.append('category', category);
-    if (budget && budget !== 'all') queryParams.append('budget', budget);
-
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/projects?${queryParams.toString()}`;
-
-    const response = await fetch(apiUrl);
-    if (!response.ok) throw new Error('Failed to fetch projects');
-
-    const projects = await response.json();
-
-    return {
-      props: {
-        projects: Array.isArray(projects) ? projects : [],
-        error: null,
-      },
-    };
-  } catch (error) {
-    console.error('SSR Error:', error);
-    return {
-      props: {
-        projects: [],
-        error: 'Failed to load projects',
-      },
-    };
-  }
 }
