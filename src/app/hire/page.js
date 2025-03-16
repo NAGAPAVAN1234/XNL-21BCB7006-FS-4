@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'; // Add Suspense to imports
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { FiSearch, FiFilter, FiX } from 'react-icons/fi';
@@ -9,21 +9,33 @@ import Loading from '@/components/Loading';
 
 const NavBar = dynamic(() => import('@/components/NavBar'), {
   loading: () => <Loading />,
-  ssr: false // Add this to prevent SSR issues
+  ssr: false // Prevent SSR issues
 });
 
 export default function Hire() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [selectedFreelancer, setSelectedFreelancer] = useState(null);
   const [freelancers, setFreelancers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null); // Add error state
+  const [error, setError] = useState(null);
+  
+  // Initialize filters from router.query once available
   const [filters, setFilters] = useState({
-    search: searchParams.get('search') || '',
-    category: searchParams.get('category') || 'all',
-    experience: searchParams.get('experience') || 'any'
+    search: '',
+    category: 'all',
+    experience: 'any'
   });
+
+  // Update filters when router.query becomes available
+  useEffect(() => {
+    if (router.isReady) {
+      setFilters({
+        search: router.query.search || '',
+        category: router.query.category || 'all',
+        experience: router.query.experience || 'any'
+      });
+    }
+  }, [router.isReady, router.query]);
 
   const categories = [
     { id: 'all', label: 'All Categories' },
@@ -38,14 +50,21 @@ export default function Hire() {
   ];
 
   useEffect(() => {
-    fetchFreelancers();
-  }, [filters]);
+    if (router.isReady) {
+      fetchFreelancers();
+    }
+  }, [filters, router.isReady]);
 
   const fetchFreelancers = async () => {
     try {
       setIsLoading(true);
-      setError(null); // Reset error state before fetching
-      const queryParams = new URLSearchParams(filters);
+      setError(null);
+      
+      const queryParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value);
+      });
+      
       const response = await fetch(`/api/freelancers?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -67,11 +86,16 @@ export default function Hire() {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => {
-      const newFilters = { ...prev, [key]: value };
-      router.push(`/hire?${new URLSearchParams(newFilters)}`);
-      return newFilters;
-    });
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+    
+    // Update URL query params
+    router.push({
+      pathname: router.pathname,
+      query: Object.fromEntries(
+        Object.entries(newFilters).filter(([_, v]) => v && v !== 'all' && v !== 'any')
+      )
+    }, undefined, { shallow: true });
   };
 
   const viewProfile = (freelancerId) => {
@@ -104,8 +128,11 @@ export default function Hire() {
         </div>
         <button
           onClick={() => {
-            setFilters({ search: '', category: 'all', experience: 'any' });
-            fetchFreelancers();
+            const resetFilters = { search: '', category: 'all', experience: 'any' };
+            setFilters(resetFilters);
+            router.push({
+              pathname: router.pathname,
+            }, undefined, { shallow: true });
           }}
           className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
         >
@@ -148,182 +175,183 @@ export default function Hire() {
   );
 
   return (
-      <Suspense fallback={<LoadingState />}>
-    <div className="min-h-screen bg-gray-50">
-      <div className="relative z-10">
-        <NavBar />
-      </div>
+    <Suspense fallback={<LoadingState />}>
+      <div className="min-h-screen bg-gray-50">
+        <div className="relative z-10">
+          <NavBar />
+        </div>
 
-      <div className="pt-24 pb-12">
-        <div className="container mx-auto px-4">
-          {/* Hero Section */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Hire Top Freelancers
-            </h1>
-            <p className="text-gray-600 max-w-2xl">
-              Find the perfect freelancer for your project from our talented community of professionals.
-            </p>
-          </div>
+        <div className="pt-24 pb-12">
+          <div className="container mx-auto px-4">
+            {/* Hero Section */}
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Hire Top Freelancers
+              </h1>
+              <p className="text-gray-600 max-w-2xl">
+                Find the perfect freelancer for your project from our talented community of professionals.
+              </p>
+            </div>
 
-          {/* Search and Filters */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <div className="grid md:grid-cols-4 gap-4">
-              <input
-                type="text"
-                placeholder="Search skills or keywords..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="p-3 border rounded-xl"
-              />
-              
-              <select
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="p-3 border rounded-xl appearance-none cursor-pointer"
-              >
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
+            {/* Search and Filters */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+              <div className="grid md:grid-cols-4 gap-4">
+                <input
+                  type="text"
+                  placeholder="Search skills or keywords..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  className="p-3 border rounded-xl"
+                />
+                
+                <select
+                  value={filters.category}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
+                  className="p-3 border rounded-xl appearance-none cursor-pointer"
+                >
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
 
-              {/* Category Pills */}
-              <div className="md:col-span-4 flex flex-wrap gap-2 mt-4">
-                {categories.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleFilterChange('category', cat.id)}
-                    className={`px-4 py-2 rounded-full text-sm ${
-                      filters.category === cat.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
+                {/* Category Pills */}
+                <div className="md:col-span-4 flex flex-wrap gap-2 mt-4">
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleFilterChange('category', cat.id)}
+                      className={`px-4 py-2 rounded-full text-sm ${
+                        filters.category === cat.id
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Results Section */}
-          {isLoading ? (
-            <LoadingState />
-          ) : error ? (
-            <ErrorState message={error} />
-          ) : freelancers?.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {freelancers.map((freelancer) => (
-                <div 
-                  key={freelancer._id} 
-                  className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl 
-                            transition-all duration-300 hover:-translate-y-1 cursor-pointer
-                            border border-gray-100"
-                  onClick={() => viewProfile(freelancer._id)}
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="relative w-20 h-20">
-                      <Image
-                        src={freelancer.avatar || '/user.avif'}
-                        alt={freelancer.name}
-                        fill
-                        className="rounded-2xl object-cover"
-                        sizes="80px"
-                      />
+            {/* Results Section */}
+            {isLoading ? (
+              <LoadingState />
+            ) : error ? (
+              <ErrorState message={error} />
+            ) : freelancers?.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {freelancers.map((freelancer) => (
+                  <div 
+                    key={freelancer._id} 
+                    className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl 
+                              transition-all duration-300 hover:-translate-y-1 cursor-pointer
+                              border border-gray-100"
+                    onClick={() => viewProfile(freelancer._id)}
+                  >
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="relative w-20 h-20">
+                        <Image
+                          src={freelancer.avatar || '/user.avif'}
+                          alt={freelancer.name}
+                          fill
+                          className="rounded-2xl object-cover"
+                          sizes="80px"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg text-gray-900">{freelancer.name}</h3>
+                        <p className="text-gray-600 text-sm mb-2">{freelancer.role || 'Freelancer'}</p>
+                        <div className="flex items-center gap-1 text-yellow-500">
+                          <StarIcon className="w-4 h-4" />
+                          <span className="font-medium">{freelancer.rating || '0.0'}</span>
+                          <span className="text-gray-400 text-sm">({freelancer.totalReviews || 0} reviews)</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg text-gray-900">{freelancer.name}</h3>
-                      <p className="text-gray-600 text-sm mb-2">{freelancer.role || 'Freelancer'}</p>
-                      <div className="flex items-center gap-1 text-yellow-500">
-                        <StarIcon className="w-4 h-4" />
-                        <span className="font-medium">{freelancer.rating || '0.0'}</span>
-                        <span className="text-gray-400 text-sm">({freelancer.totalReviews || 0} reviews)</span>
+
+                    <p className="text-gray-700 mb-4 line-clamp-2">{freelancer.bio || 'No bio available'}</p>
+
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-2">
+                        {(freelancer.skills || []).slice(0, 3).map((skill, i) => (
+                          <span key={i} className="bg-blue-50 text-blue-600 text-sm px-3 py-1 rounded-full">
+                            {skill}
+                          </span>
+                        ))}
+                        {(freelancer.skills || []).length > 3 && (
+                          <span className="text-gray-500 text-sm">
+                            +{freelancer.skills.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <span className="text-blue-600 font-bold">${freelancer.hourlyRate || '0'}/hr</span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFreelancer(freelancer);
+                          }}
+                          className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          Quick View
+                        </button>
+                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                          Contact
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  <p className="text-gray-700 mb-4 line-clamp-2">{freelancer.bio || 'No bio available'}</p>
-
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-2">
-                      {(freelancer.skills || []).slice(0, 3).map((skill, i) => (
-                        <span key={i} className="bg-blue-50 text-blue-600 text-sm px-3 py-1 rounded-full">
-                          {skill}
-                        </span>
-                      ))}
-                      {(freelancer.skills || []).length > 3 && (
-                        <span className="text-gray-500 text-sm">
-                          +{freelancer.skills.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <span className="text-blue-600 font-bold">${freelancer.hourlyRate || '0'}/hr</span>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFreelancer(freelancer);
-                        }}
-                        className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        Quick View
-                      </button>
-                      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Contact
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <NoFreelancers />
-          )}
+                ))}
+              </div>
+            ) : (
+              <NoFreelancers />
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Quick View Modal */}
-      {selectedFreelancer && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <button 
-              onClick={() => setSelectedFreelancer(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-            >
-              <FiX className="w-6 h-6" /> {/* Replace XIcon with FiX */}
-            </button>
-            
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="relative w-24 h-24">
-                <Image
-                  src={selectedFreelancer.avatar || '/user.avif'}
-                  alt={selectedFreelancer.name}
-                  fill
-                  className="rounded-full object-cover"
-                  sizes="(max-width: 96px) 100vw, 96px"
-                />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold">{selectedFreelancer.name}</h2>
-                <p className="text-gray-600">{selectedFreelancer.role}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <StarIcon className="w-5 h-5 text-yellow-500" />
-                  <span className="font-semibold">{selectedFreelancer.rating || '0.0'}</span>
+        {/* Quick View Modal */}
+        {selectedFreelancer && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <button 
+                onClick={() => setSelectedFreelancer(null)}
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+              
+              {/* Header */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="relative w-24 h-24">
+                  <Image
+                    src={selectedFreelancer.avatar || '/user.avif'}
+                    alt={selectedFreelancer.name}
+                    fill
+                    className="rounded-full object-cover"
+                    sizes="(max-width: 96px) 100vw, 96px"
+                  />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">{selectedFreelancer.name}</h2>
+                  <p className="text-gray-600">{selectedFreelancer.role}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <StarIcon className="w-5 h-5 text-yellow-500" />
+                    <span className="font-semibold">{selectedFreelancer.rating || '0.0'}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
+             
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-gray-50 p-4 rounded-lg text-center">
                 <p className="text-2xl font-bold text-blue-600">
-                  ${selectedFreelancer.hourlyRate || '0'}
+                  ${selectedFreelancer.hourlyRate || '10'}
                 </p>
                 <p className="text-gray-600 text-sm">Hourly Rate</p>
               </div>
@@ -335,7 +363,7 @@ export default function Hire() {
               </div>
               <div className="bg-gray-50 p-4 rounded-lg text-center">
                 <p className="text-2xl font-bold text-blue-600">
-                  {selectedFreelancer.successRate || '0%'}
+                  {selectedFreelancer.successRate || '90%'}
                 </p>
                 <p className="text-gray-600 text-sm">Success Rate</p>
               </div>
