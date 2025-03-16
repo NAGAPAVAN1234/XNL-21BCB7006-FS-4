@@ -175,7 +175,7 @@ export default function FindWork() {
           </div>
 
           {/* Projects List */}
-          {!loading ? (
+          {loading ? (
             <Loading />
           ) : error ? (
             <div className="text-center text-red-600 py-4">{error}</div>
