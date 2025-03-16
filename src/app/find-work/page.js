@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { FiSearch, FiFilter } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import Loading from '@/components/Loading';
@@ -10,15 +10,28 @@ const NavBar = dynamic(() => import('@/components/NavBar'), {
 });
 
 export default function FindWork() {
-  const searchParams = useSearchParams();
-  const [projects, setProjects] = useState([]);  // Keep this as empty array
+  const router = useRouter();
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);  // Add error state
+  const [error, setError] = useState(null);
+  
+  // Initialize filters from router.query once available
   const [filters, setFilters] = useState({
-    search: searchParams.get('search') || '',
-    category: searchParams.get('category') || 'all',
-    budget: searchParams.get('budget') || 'all'
+    search: '',
+    category: 'all',
+    budget: 'all'
   });
+
+  // Update filters when router.query becomes available
+  useEffect(() => {
+    if (router.isReady) {
+      setFilters({
+        search: router.query.search || '',
+        category: router.query.category || 'all',
+        budget: router.query.budget || 'all'
+      });
+    }
+  }, [router.isReady, router.query]);
 
   const categories = [
     { id: 'all', label: 'All Categories' },
@@ -33,17 +46,23 @@ export default function FindWork() {
   ];
 
   useEffect(() => {
-    fetchProjects();
-  }, [filters]);
+    if (router.isReady) {
+      fetchProjects();
+    }
+  }, [filters, router.isReady]);
 
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      setError(null); // Reset error before fetching
-      const queryParams = new URLSearchParams(filters);
-      const response = await fetch(/api/projects/search?${queryParams}, {
+      setError(null);
+      const queryParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value);
+      });
+      
+      const response = await fetch(`/api/projects/search?${queryParams}`, {
         headers: {
-          'Authorization': Bearer ${localStorage.getItem('token')}
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
@@ -52,16 +71,28 @@ export default function FindWork() {
       }
 
       const data = await response.json();
-      
-      // Ensure data is an array
       setProjects(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       setError(error.message);
-      setProjects([]); // Reset projects on error
+      setProjects([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Update URL when filters change
+  const updateFilters = (newFilters) => {
+    const updatedFilters = { ...filters, ...newFilters };
+    setFilters(updatedFilters);
+    
+    // Update URL query params
+    router.push({
+      pathname: router.pathname,
+      query: Object.fromEntries(
+        Object.entries(updatedFilters).filter(([_, v]) => v && v !== 'all')
+      )
+    }, undefined, { shallow: true });
   };
 
   // Add No Projects Found component
@@ -73,7 +104,7 @@ export default function FindWork() {
           Try adjusting your filters or search terms to find more projects.
         </p>
         <button
-          onClick={() => setFilters({
+          onClick={() => updateFilters({
             search: '',
             category: 'all',
             budget: 'all'
@@ -99,13 +130,13 @@ export default function FindWork() {
                 type="text"
                 placeholder="Search projects..."
                 value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                onChange={(e) => updateFilters({ search: e.target.value })}
                 className="p-3 border rounded-xl"
               />
               
               <select
                 value={filters.category}
-                onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
+                onChange={(e) => updateFilters({ category: e.target.value })}
                 className="p-3 border rounded-xl"
               >
                 {categories.map(cat => (
@@ -115,7 +146,7 @@ export default function FindWork() {
               
               <select
                 value={filters.budget}
-                onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value }))}
+                onChange={(e) => updateFilters({ budget: e.target.value })}
                 className="p-3 border rounded-xl"
               >
                 <option value="all">All Budgets</option>
@@ -130,7 +161,7 @@ export default function FindWork() {
               {categories.map(cat => (
                 <button
                   key={cat.id}
-                  onClick={() => setFilters(prev => ({ ...prev, category: cat.id }))}
+                  onClick={() => updateFilters({ category: cat.id })}
                   className={`px-4 py-2 rounded-full text-sm ${
                     filters.category === cat.id
                       ? 'bg-blue-600 text-white'
