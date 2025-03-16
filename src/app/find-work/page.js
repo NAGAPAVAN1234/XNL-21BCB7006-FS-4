@@ -1,8 +1,8 @@
 "use client"; // ✅ Mark as Client Component
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation"; // ✅ Replace useRouter
-import { FiSearch, FiFilter } from "react-icons/fi";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { FiSearch } from "react-icons/fi";
 import dynamic from "next/dynamic";
 import Loading from "@/components/Loading";
 
@@ -11,10 +11,19 @@ const NavBar = dynamic(() => import("@/components/NavBar"), {
 });
 
 export default function FindWork() {
-  const searchParams = useSearchParams(); // ✅ Use useSearchParams instead of useRouter
+  return (
+    <Suspense fallback={<Loading />}>
+      <FindWorkContent />
+    </Suspense>
+  );
+}
+
+function FindWorkContent() {
+  const searchParams = useSearchParams();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
 
   // Extract search parameters safely
   const filters = {
@@ -24,13 +33,17 @@ export default function FindWork() {
   };
 
   useEffect(() => {
-    fetchProjects();
-  }, [filters.search, filters.category, filters.budget]);
+    setAuthToken(localStorage.getItem("token")); // ✅ Ensure localStorage is accessed only in the browser
+  }, []);
+
+  useEffect(() => {
+    if (authToken) fetchProjects();
+  }, [filters.search, filters.category, filters.budget, authToken]);
 
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      setError(null); // Reset error before fetching
+      setError(null);
 
       // Build query string
       const queryParams = new URLSearchParams();
@@ -41,7 +54,7 @@ export default function FindWork() {
       const apiUrl = `/api/projects?${queryParams.toString()}`;
       const response = await fetch(apiUrl, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${authToken}`,
         },
       });
 
@@ -88,7 +101,7 @@ export default function FindWork() {
                 <div key={project._id} className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
                   <h3 className="text-xl font-bold mb-2">{project.title}</h3>
                   <p className="text-gray-600 mb-4">{project.description}</p>
-                  <p className="text-2xl font-bold text-blue-600">${project.budget.minAmount}</p>
+                  <p className="text-2xl font-bold text-blue-600">${project.budget?.minAmount || "N/A"}</p>
                 </div>
               ))}
             </div>
