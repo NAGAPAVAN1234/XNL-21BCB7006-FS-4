@@ -16,36 +16,39 @@ export default function FindWork() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Ensure we are in a browser environment before accessing localStorage
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+        const response = await fetch(`/api/projects`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch projects');
+        }
+
+        const data = await response.json();
+        setProjects(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        setError(error.message);
+        setProjects([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (router.isReady) {
       fetchProjects();
     }
-  }, [router.isReady]);
-
-  const fetchProjects = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/projects`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch projects');
-      }
-
-      const data = await response.json();
-      setProjects(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      setError(error.message);
-      setProjects([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [router]); // Depend on router instead of router.isReady
 
   const NoProjects = () => (
     <div className="text-center py-12">
