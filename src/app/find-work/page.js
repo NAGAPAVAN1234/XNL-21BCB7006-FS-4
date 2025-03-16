@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { FiSearch, FiFilter } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import Loading from '@/components/Loading';
