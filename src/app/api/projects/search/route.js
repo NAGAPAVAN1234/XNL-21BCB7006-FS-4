@@ -5,13 +5,8 @@ import Project from '@/models/Project';
 export async function GET(request) {
   try {
     await connectDB();
-    
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
 
-    const search = searchParams.get('search');
-    const category = searchParams.get('category');
-    const budget = searchParams.get('budget');
+    const { search, category, budget } = request.nextUrl.searchParams;
 
     const query = {};
     if (search) {
@@ -22,11 +17,11 @@ export async function GET(request) {
     }
     if (budget && budget !== 'all') {
       if (budget === 'low') {
-        query['budget.minAmount'] = { $lt: 100 };
+        query.budget = { $lt: 100 };
       } else if (budget === 'medium') {
-        query['budget.minAmount'] = { $gte: 100, $lt: 500 };
+        query.budget = { $gte: 100, $lt: 500 };
       } else if (budget === 'high') {
-        query['budget.minAmount'] = { $gte: 500 };
+        query.budget = { $gte: 500 };
       }
     }
 
