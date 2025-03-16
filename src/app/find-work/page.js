@@ -60,9 +60,9 @@ export default function FindWork() {
         if (value) queryParams.append(key, value);
       });
       
-      const response = await fetch(/api/projects/search?${queryParams}, {
+      const response = await fetch(`/api/projects/search?${queryParams}`, {
         headers: {
-          'Authorization': Bearer ${localStorage.getItem('token')}
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
@@ -162,11 +162,11 @@ export default function FindWork() {
                 <button
                   key={cat.id}
                   onClick={() => updateFilters({ category: cat.id })}
-                  className={px-4 py-2 rounded-full text-sm ${
+                  className={`px-4 py-2 rounded-full text-sm ${
                     filters.category === cat.id
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }}
+                  }`}
                 >
                   {cat.label}
                 </button>
