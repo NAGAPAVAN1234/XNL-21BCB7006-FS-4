@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { FiCheckCircle } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import Loading from '@/components/Loading';
@@ -11,14 +11,16 @@ const NavBar = dynamic(() => import('@/components/NavBar'), {
 
 export default function Success() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState(null);
 
   useEffect(() => {
+    // Only run verification when router is ready
+    if (!router.isReady) return;
+
     const verifyPayment = async () => {
       try {
-        const sessionId = searchParams.get('session_id');
+        const sessionId = router.query.session_id;
         if (!sessionId) {
           router.push('/');
           return;
@@ -45,7 +47,7 @@ export default function Success() {
     };
 
     verifyPayment();
-  }, []);
+  }, [router.isReady, router.query]);
 
   if (loading) return <Loading />;
 
