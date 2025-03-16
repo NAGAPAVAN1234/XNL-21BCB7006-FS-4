@@ -1,29 +1,17 @@
-/* globals.css */
-
-/* --- Tailwind Directives (Correct Way) --- */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* --- Your Custom CSS --- */
+@import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-/*  (Optional) Theme Customization - Good Practice */
-/*  Use CSS variables for theme consistency */
-/*  I've updated this section to use standard CSS variable syntax */
-:root {
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /*  If you're using the Geist font, define it here: */
-  /* --font-sans: var(--font-geist-sans); */ /* Uncomment if using Geist */
-  /* --font-mono: var(--font-geist-mono); */ /* Uncomment if using Geist */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-/* Dark Mode (Corrected) */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -32,13 +20,14 @@
 }
 
 body {
-  background: var(--color-background); /* Use the theme variable */
-  color: var(--color-foreground);      /* Use the theme variable */
-  font-family: Arial, Helvetica, sans-serif; /* Fallback font */
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-
-/* --- Tailwind @layer Directives --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer utilities {
   .animate-fade-in {
@@ -48,27 +37,25 @@ body {
   .glass-effect {
     @apply bg-white/10 backdrop-blur-xl border border-white/20;
   }
-
+  
   .hover-lift {
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
   }
-
+  
   .animation-delay-150 {
     animation-delay: 150ms;
   }
-
+  
   .bg-fixed {
     background-attachment: fixed;
   }
 
   .bg-grid-pattern {
     background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-      linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+                     linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
     background-size: 24px 24px;
   }
 }
-
-/* --- Keyframes (Correct Placement) --- */
 
 @keyframes fade-in {
   from {
@@ -82,22 +69,16 @@ body {
 }
 
 @keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
 
-/* --- Custom Scrollbar (Good) --- */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -111,30 +92,30 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555; /*  Direct CSS - Fine here */
+  background: #555;
 }
 
-/* --- Selection Style (Good) --- */
+/* Selection style */
 ::selection {
   @apply bg-blue-500 text-white;
 }
 
-/* --- Smooth Scrolling (Good) --- */
+/* Smooth Scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* --- Smooth Transitions (Good) --- */
+/* Smooth transitions */
 * {
   @apply transition-colors duration-200;
 }
 
-/* --- Custom Gradient Text (Good) --- */
+/* Custom Gradient Text */
 .gradient-text {
   @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
 }
 
-/* --- Enhanced Card Hover Effects (Good) --- */
+/* Enhanced Card Hover Effects */
 .group:hover .group-hover\:scale-110 {
   transform: scale(1.1);
 }
@@ -143,7 +124,7 @@ html {
   transform: translateX(0.5rem);
 }
 
-/* --- Hide Scrollbar (Good) --- */
+/* Hide scrollbar but keep functionality */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -153,8 +134,7 @@ html {
   scrollbar-width: none;
 }
 
-/* --- Smooth Scroll Behavior (Good) --- */
+/* Smooth scroll behavior */
 .scroll-smooth {
   scroll-behavior: smooth;
 }
-
