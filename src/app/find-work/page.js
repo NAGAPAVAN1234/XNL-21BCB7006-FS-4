@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { FiSearch, FiFilter } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import Loading from '@/components/Loading';
@@ -11,7 +11,8 @@ const NavBar = dynamic(() => import('@/components/NavBar'), {
 });
 
 export default function FindWork() {
-  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { query } = router;
   const [projects, setProjects] = useState([]);  // Keep this as empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);  // Add error state
@@ -41,11 +42,17 @@ export default function FindWork() {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      setError(null); // Reset error before fetching
-      const queryParams = new URLSearchParams(filters);
-      const response = await fetch(`/api/projects/search?${queryParams}`, {
+      setError(null);
+
+      // Convert filters to query parameters while avoiding undefined values
+      const queryParams = Object.entries(filters)
+        .filter(([_, value]) => value !== '') // Exclude empty values
+        .map(([key, value]) => ${encodeURIComponent(key)}=${encodeURIComponent(value)})
+        .join('&');
+
+      const response = await fetch(/api/projects/search?${queryParams}, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': Bearer ${localStorage.getItem('token')}
         }
       });
 
@@ -54,13 +61,11 @@ export default function FindWork() {
       }
 
       const data = await response.json();
-
-      // Ensure data is an array
       setProjects(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       setError(error.message);
-      setProjects([]); // Reset projects on error
+      setProjects([]);
     } finally {
       setLoading(false);
     }
